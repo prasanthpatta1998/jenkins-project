@@ -1,3 +1,5 @@
+//Pipeline script from SCM Option selection//
+
 pipeline {
     agent any
 
