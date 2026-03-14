@@ -1,24 +1,32 @@
 pipeline {
     agent any
+
     tools {
         maven "jenkins-mvn"
     }
+
     parameters {
         string(name: 'A', defaultValue: '20', description: 'First number')
         string(name: 'B', defaultValue: '5', description: 'Second number')
     }
+
     stages {
-        stage('git clone') {
+        stage('Checkout') {
             steps {
-                git "https://github.com/prasanthpatta1998/jenkins-project.git"
+                // Jenkins automatically checks out SCM when using Pipeline from SCM,
+                // but you can keep this if you want explicit control
+                git branch: 'main',
+                    url: 'https://github.com/prasanthpatta1998/jenkins-project.git'
             }
         }
-        stage('build') {
+
+        stage('Build') {
             steps {
                 sh "mvn clean package"
             }
         }
-        stage('test') {
+
+        stage('Test') {
             steps {
                 script {
                     def a = params.A.toInteger()
@@ -49,27 +57,43 @@ pipeline {
                 }
             }
         }
-        stage('nexus') {
+
+        stage('Upload to Nexus') {
             steps {
-                nexusArtifactUploader artifacts: [[artifactId: 'ccitwebsite', classifier: '', file: 'target/ccitwebsite.war', type: 'war']], credentialsId: '5f542260-b91d-4402-8c6d-199abe2f7ca8', groupId: 'com.example', nexusUrl: '13.203.217.27:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'jenkinsrepo', version: '0.0.2'
+                nexusArtifactUploader artifacts: [[artifactId: 'ccitwebsite',
+                                                   classifier: '',
+                                                   file: 'target/ccitwebsite.war',
+                                                   type: 'war']],
+                    credentialsId: '5f542260-b91d-4402-8c6d-199abe2f7ca8',
+                    groupId: 'com.example',
+                    nexusUrl: '13.203.217.27:8081',
+                    nexusVersion: 'nexus3',
+                    protocol: 'http',
+                    repository: 'jenkinsrepo',
+                    version: '0.0.2'
             }
         }
-        stage('deploy') {
+
+        stage('Deploy to Tomcat') {
             steps {
-                deploy adapters: [tomcat9(alternativeDeploymentContext: '', credentialsId: '37b3b733-3343-4120-82c0-f1b4ab4d474d', path: '', url: 'http://65.0.110.47:8080/')], contextPath: 'jenkisProject', war: 'target/ccitwebsite.war'
+                deploy adapters: [tomcat9(credentialsId: '37b3b733-3343-4120-82c0-f1b4ab4d474d',
+                                          url: 'http://65.0.110.47:8080/')],
+                       contextPath: 'jenkisProject',
+                       war: 'target/ccitwebsite.war'
             }
         }
     }
-    post{
-                success {
+
+    post {
+        success {
             slackSend(channel: '#jenkins-pipeline',
                       color: 'good',
-                      message: "✅ Deployment succeeded for *ccitwebsite* version 0.0.1")
+                      message: "✅ Deployment succeeded for *ccitwebsite* version 0.0.2")
         }
         failure {
             slackSend(channel: '#jenkins-pipeline',
                       color: 'danger',
-                      message: "❌ Deployment failed for *ccitwebsite* version 0.0.1. Check Jenkins logs.")
+                      message: "❌ Deployment failed for *ccitwebsite* version 0.0.2. Check Jenkins logs.")
         }
         always {
             slackSend(channel: '#jenkins-pipeline',
