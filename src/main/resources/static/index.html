@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Math Operations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 25px 35px;
+            border-radius: 12px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+            width: 350px;
+            text-align: center;
+        }
+        h2 { margin-bottom: 15px; color: #333; }
+        input, select, button {
+            width: 100%;
+            margin: 10px 0;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background: #0056b3; }
+        #result { margin-top: 15px; font-weight: bold; color: green; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Math Operations</h2>
+    <form id="mathForm">
+        <input type="number" id="a" placeholder="Enter first number" required>
+        <input type="number" id="b" placeholder="Enter second number" required>
+        <select id="operation" required>
+            <option value="add">Addition</option>
+            <option value="subtract">Subtraction</option>
+            <option value="multiply">Multiplication</option>
+            <option value="divide">Division</option>
+        </select>
+        <button type="submit">Calculate</button>
+    </form>
+    <div id="result"></div>
+</div>
+
+<script>
+document.getElementById("mathForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+    const a = document.getElementById("a").value;
+    const b = document.getElementById("b").value;
+    const operation = document.getElementById("operation").value;
+
+    try {
+        const response = await fetch(`/math/${operation}?a=${a}&b=${b}`);
+        if (!response.ok) throw new Error("Server error");
+        const result = await response.text();
+        document.getElementById("result").innerText = "Result: " + result;
+    } catch (err) {
+        document.getElementById("result").innerText = "Error: " + err.message;
+        document.getElementById("result").style.color = "red";
+    }
+});
+</script>
+</body>
+</html>
