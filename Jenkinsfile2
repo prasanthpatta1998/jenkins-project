@@ -1,0 +1,82 @@
+//Pipeline Script option//
+
+pipeline {
+    agent any
+    tools {
+        maven "jenkins-mvn"
+    }
+    parameters {
+        string(name: 'A', defaultValue: '20', description: 'First number')
+        string(name: 'B', defaultValue: '5', description: 'Second number')
+    }
+    stages {
+        stage('git clone') {
+            steps {
+                git "https://github.com/prasanthpatta1998/jenkins-project.git"
+            }
+        }
+        stage('build') {
+            steps {
+                sh "mvn clean package"
+            }
+        }
+        stage('test') {
+            steps {
+                script {
+                    def a = params.A.toInteger()
+                    def b = params.B.toInteger()
+
+                    def add = a + b
+                    def sub = a - b
+                    def mul = a * b
+                    def div = (b != 0) ? (a.intdiv(b)) : "Division by zero!"
+
+                    echo "Addition Result: ${a} + ${b} = ${add}"
+                    echo "Subtraction Result: ${a} - ${b} = ${sub}"
+                    echo "Multiplication Result: ${a} * ${b} = ${mul}"
+                    echo "Division Result: ${a} / ${b} = ${div}"
+
+                    env.ADD_RESULT = "${add}"
+                    env.SUB_RESULT = "${sub}"
+                    env.MUL_RESULT = "${mul}"
+                    env.DIV_RESULT = "${div}"
+
+                    sh """
+                      mvn test \
+                        -Dadd.a=${a} -Dadd.b=${b} \
+                        -Dsub.a=${a} -Dsub.b=${b} \
+                        -Dmul.a=${a} -Dmul.b=${b} \
+                        -Ddiv.a=${a} -Ddiv.b=${b}
+                    """
+                }
+            }
+        }
+        stage('nexus') {
+            steps {
+                nexusArtifactUploader artifacts: [[artifactId: 'ccitwebsite', classifier: '', file: 'target/ccitwebsite.war', type: 'war']], credentialsId: '5f542260-b91d-4402-8c6d-199abe2f7ca8', groupId: 'com.example', nexusUrl: '13.203.217.27:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'jenkinsrepo', version: '0.0.2'
+            }
+        }
+        stage('deploy') {
+            steps {
+                deploy adapters: [tomcat9(alternativeDeploymentContext: '', credentialsId: '37b3b733-3343-4120-82c0-f1b4ab4d474d', path: '', url: 'http://65.0.110.47:8080/')], contextPath: 'jenkisProject', war: 'target/ccitwebsite.war'
+            }
+        }
+    }
+    post{
+                success {
+            slackSend(channel: '#jenkins-pipeline',
+                      color: 'good',
+                      message: "✅ Deployment succeeded for *ccitwebsite* version 0.0.1")
+        }
+        failure {
+            slackSend(channel: '#jenkins-pipeline',
+                      color: 'danger',
+                      message: "❌ Deployment failed for *ccitwebsite* version 0.0.1. Check Jenkins logs.")
+        }
+        always {
+            slackSend(channel: '#jenkins-pipeline',
+                      color: '#439FE0',
+                      message: "ℹ️ Build finished with status: ${currentBuild.currentResult}")
+        }
+    }
+}
